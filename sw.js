@@ -1,8 +1,8 @@
 /* Oasis B2B service worker: приложение работает офлайн, карта кэширует просмотренные районы */
-const VERSION = "oasis-b2b-v1";
+const VERSION = "oasis-b2b-v2";
 const SHELL = ["./", "index.html", "data.js", "playbooks.js", "leaflet.js", "leaflet.css",
   "manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
-const TILE_CACHE = "oasis-tiles-v1";
+const TILE_CACHE = "oasis-tiles-v2";
 const TILE_LIMIT = 1500;
 
 self.addEventListener("install", e => {

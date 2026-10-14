@@ -125,6 +125,8 @@ a{color:inherit}
 #map{position:absolute;inset:0;background:var(--card2)}
 .leaflet-container{font-family:var(--font);background:var(--card2)}
 .leaflet-control-attribution{font-size:9px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)}}
+:root[data-theme="dark"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)}
 .leaflet-bottom{bottom:calc(env(safe-area-inset-bottom,0px) + 74px)}
 .mapbar{position:absolute;z-index:500;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 8px)}
 .mapbar .chips{margin:0;padding:0 0 2px}
@@ -672,7 +674,7 @@ function initMap() {
   let lastK = null; map.on("zoomend", () => { const z = map.getZoom(), k = z >= 15 ? 1 : z >= 13 ? .75 : .5; if (k !== lastK) { lastK = k; if (S.tab === "map") renderMap() } });
 }
 function setTiles() { if (!map) return; if (tileLayer) map.removeLayer(tileLayer);
-  tileLayer = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${isDark() ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`, { maxZoom: 20, subdomains: "abcd", attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/attributions">CARTO</a>' }).addTo(map) }
+  tileLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map) }
 function drawMe() { if (!meLayer) return; meLayer.clearLayers(); if (S.me) { L.circleMarker(S.me.p, { radius: 16, stroke: false, fillColor: "#0A84FF", fillOpacity: .18, interactive: false }).addTo(meLayer); L.circleMarker(S.me.p, { radius: 7, color: "#fff", weight: 3, fillColor: "#0A84FF", fillOpacity: 1 }).addTo(meLayer) } }
 function renderMap() {
   $("#mapChips").innerHTML = chipsHtml(filtered(true));
