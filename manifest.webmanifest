@@ -1,0 +1,17 @@
+{
+  "name": "Oasis B2B — база и CRM",
+  "short_name": "Oasis B2B",
+  "description": "Карманная база организаций Ташкента и мини-CRM для B2B-продаж Oasis Touristik",
+  "lang": "ru",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F2F2F7",
+  "theme_color": "#0E8C8A",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

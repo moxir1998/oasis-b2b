@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Oasis B2B</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Oasis B2B">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="leaflet.css">
+<style>
+/* Layout: iOS-style app shell — large-title screens scroll under a translucent tab bar;
+   every primary action (call, route, add, log a touch) lives in the bottom thumb zone. */
+:root{
+  --bg:#F2F2F7; --card:#FFFFFF; --card2:#F2F2F7; --fill:rgba(120,120,128,.12); --fill2:rgba(120,120,128,.20);
+  --label:#000000; --label2:rgba(60,60,67,.62); --label3:rgba(60,60,67,.32); --sep:rgba(60,60,67,.16);
+  --tint:#0E8C8A; --tint-soft:rgba(14,140,138,.12); --on-tint:#FFFFFF;
+  --green:#34C759; --green-soft:rgba(52,199,89,.14); --yellow:#FFCC00; --on-yellow:#3D2E00;
+  --red:#FF3B30; --orange:#FF9500; --blue:#007AFF;
+  --bar:rgba(249,249,249,.78); --scrim:rgba(0,0,0,.32);
+  --shadow:0 10px 30px rgba(0,0,0,.12),0 1px 3px rgba(0,0,0,.06);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --r:14px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#000000; --card:#1C1C1E; --card2:#2C2C2E; --fill:rgba(118,118,128,.24); --fill2:rgba(118,118,128,.36);
+  --label:#FFFFFF; --label2:rgba(235,235,245,.62); --label3:rgba(235,235,245,.3); --sep:rgba(84,84,88,.6);
+  --tint:#3CC8C3; --tint-soft:rgba(60,200,195,.16); --on-tint:#00211F;
+  --green:#30D158; --green-soft:rgba(48,209,88,.18); --yellow:#FFD60A; --on-yellow:#2B2000;
+  --red:#FF453A; --orange:#FF9F0A; --blue:#0A84FF;
+  --bar:rgba(22,22,24,.78); --scrim:rgba(0,0,0,.55); --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#000000; --card:#1C1C1E; --card2:#2C2C2E; --fill:rgba(118,118,128,.24); --fill2:rgba(118,118,128,.36);
+  --label:#FFFFFF; --label2:rgba(235,235,245,.62); --label3:rgba(235,235,245,.3); --sep:rgba(84,84,88,.6);
+  --tint:#3CC8C3; --tint-soft:rgba(60,200,195,.16); --on-tint:#00211F;
+  --green:#30D158; --green-soft:rgba(48,209,88,.18); --yellow:#FFD60A; --on-yellow:#2B2000;
+  --red:#FF453A; --orange:#FF9F0A; --blue:#0A84FF;
+  --bar:rgba(22,22,24,.78); --scrim:rgba(0,0,0,.55); --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--label);font-family:var(--font);font-size:17px;line-height:1.35;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overflow:hidden;overscroll-behavior:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{border:0;background:none;padding:0;cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--tint);outline-offset:2px}
+.press{transition:transform .12s ease-out,opacity .12s}
+.press:active{transform:scale(.96);opacity:.85}
+
+/* Screens */
+.screen{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  padding-top:calc(env(safe-area-inset-top,0px) + 8px);
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 96px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.screen[hidden]{display:none}
+.lt{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:6px 0 10px}
+.lt h1{margin:0;font-size:34px;line-height:1.1;font-weight:700;letter-spacing:-.022em}
+.lt .sub{color:var(--label2);font-size:15px;margin-top:2px;font-variant-numeric:tabular-nums}
+.iconbtn{width:38px;height:38px;border-radius:50%;background:var(--fill);display:grid;place-items:center;color:var(--tint);flex:none}
+.pillbtn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 13px;border-radius:999px;background:var(--tint-soft);color:var(--tint);font-weight:600;font-size:15px;white-space:nowrap;max-width:62vw;overflow:hidden;text-overflow:ellipsis}
+
+/* Search + chips */
+.search{display:flex;align-items:center;gap:8px;height:38px;padding:0 10px;border-radius:11px;background:var(--fill);margin-bottom:10px}
+.search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-size:17px}
+.search input::placeholder{color:var(--label2)}
+.search svg{color:var(--label2);flex:none}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:0 max(16px,env(safe-area-inset-left,0px)) 4px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;background:var(--card);font-size:14px;font-weight:600;white-space:nowrap;box-shadow:0 0 0 .5px var(--sep) inset}
+.chip i{width:8px;height:8px;border-radius:50%}
+.chip em{font-style:normal;color:var(--label2);font-weight:500;font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--label);color:var(--bg);box-shadow:none}
+.chip[aria-pressed="true"] em{color:inherit;opacity:.7}
+.seg{display:flex;gap:2px;padding:2px;border-radius:9px;background:var(--fill);margin:10px 0 12px}
+.seg button{flex:1;height:30px;border-radius:7px;font-size:13px;font-weight:600;color:var(--label)}
+.seg button[aria-pressed="true"]{background:var(--card);box-shadow:0 3px 8px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
+
+/* Grouped lists */
+.group{background:var(--card);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
+.ghead{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--label2);padding:0 4px 7px;display:flex;justify-content:space-between}
+.row{display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;min-height:60px;position:relative}
+.row+.row::before{content:"";position:absolute;top:0;right:0;left:62px;border-top:.5px solid var(--sep)}
+.av{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;flex:none}
+.rinfo{flex:1;min-width:0}
+.rt{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
+.rs{font-size:13px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;font-variant-numeric:tabular-nums}
+.rs b{color:var(--tint);font-weight:600}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:5px;vertical-align:1px;margin-right:4px}
+.b-work{background:var(--tint-soft);color:var(--tint)}
+.b-due{background:rgba(255,59,48,.14);color:var(--red)}
+.b-warn{background:rgba(255,149,0,.16);color:var(--orange)}
+.racts{display:flex;gap:8px;flex:none}
+.rb{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;text-decoration:none}
+.rb.nav{background:var(--yellow);color:var(--on-yellow)}
+.rb.call{background:var(--green-soft);color:var(--green)}
+.rb.off{opacity:.25;pointer-events:none}
+.more{display:block;width:100%;padding:14px;text-align:center;color:var(--tint);font-weight:600}
+.empty{text-align:center;color:var(--label2);padding:36px 20px;font-size:15px}
+.empty b{display:block;color:var(--label);font-size:20px;margin-bottom:6px}
+
+/* Today */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.stat{background:var(--card);border-radius:var(--r);padding:12px 12px 10px}
+.stat b{display:block;font-size:28px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--label2)}
+.stat.red b{color:var(--red)} .stat.tint b{color:var(--tint)}
+.banner{display:flex;gap:12px;align-items:center;background:var(--card);border-radius:var(--r);padding:12px 14px;margin-bottom:22px}
+.banner p{margin:0;font-size:14px;color:var(--label2);flex:1}
+.banner p b{color:var(--label);display:block;font-size:15px}
+.tbtn{height:34px;padding:0 14px;border-radius:999px;background:var(--tint);color:var(--on-tint);font-weight:600;font-size:15px;flex:none}
+.quick{display:flex;gap:6px;margin-top:8px}
+.quick button,.quick a{height:30px;padding:0 11px;border-radius:999px;background:var(--fill);font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.quick .g{background:var(--green-soft);color:var(--green)}
+
+/* Map */
+#mapWrap{position:absolute;inset:0}
+#map{position:absolute;inset:0;background:var(--card2)}
+.leaflet-container{font-family:var(--font);background:var(--card2)}
+.leaflet-control-attribution{font-size:9px}
+.leaflet-bottom{bottom:calc(env(safe-area-inset-bottom,0px) + 74px)}
+.mapbar{position:absolute;z-index:500;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));top:calc(env(safe-area-inset-top,0px) + 8px)}
+.mapbar .chips{margin:0;padding:0 0 2px}
+.mapbar .chip{box-shadow:var(--shadow)}
+.mapfab{position:absolute;z-index:500;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 100px);width:50px;height:50px;border-radius:50%;background:var(--card);color:var(--tint);box-shadow:var(--shadow);display:grid;place-items:center}
+.maphint{position:absolute;z-index:500;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 56px);background:var(--label);color:var(--bg);padding:9px 15px;border-radius:999px;font-size:14px;font-weight:600;white-space:nowrap;box-shadow:var(--shadow)}
+
+/* Tab bar + FAB */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:700;display:flex;background:var(--bar);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border-top:.5px solid var(--sep);padding:6px max(8px,env(safe-area-inset-left,0px)) calc(env(safe-area-inset-bottom,0px) + 4px)}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:600;color:var(--label2);padding:2px 0;position:relative}
+.tabbar button[aria-selected="true"]{color:var(--tint)}
+.tabbar .dot{position:absolute;top:-2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;line-height:17px;font-weight:700}
+.fab{position:fixed;z-index:690;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 70px);height:52px;padding:0 20px 0 16px;border-radius:26px;background:var(--tint);color:var(--on-tint);display:flex;align-items:center;gap:6px;font-weight:600;font-size:16px;box-shadow:0 8px 22px rgba(14,140,138,.38)}
+@media (prefers-reduced-transparency: reduce){.tabbar{background:var(--card);-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* Sheets */
+.scrim{position:fixed;inset:0;z-index:900;background:var(--scrim);opacity:0;transition:opacity .25s}
+.scrim.on{opacity:1}
+.sheet{position:fixed;z-index:901;left:0;right:0;bottom:0;max-width:680px;margin:0 auto;background:var(--bg);border-radius:14px 14px 0 0;max-height:calc(100% - env(safe-area-inset-top,0px) - 12px);display:flex;flex-direction:column;transform:translateY(100%);transition:transform .34s cubic-bezier(.32,.72,0,1);box-shadow:var(--shadow);touch-action:pan-y}
+.sheet.on{transform:translateY(0)}
+.sh-head{padding:6px max(16px,env(safe-area-inset-left,0px)) 10px;flex:none;touch-action:none}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--label3);margin:2px auto 10px}
+.sh-title{display:flex;align-items:flex-start;gap:12px}
+.sh-title h2{margin:0;font-size:22px;line-height:1.2;font-weight:700;letter-spacing:-.018em;flex:1;min-width:0;text-wrap:balance}
+.close{width:30px;height:30px;border-radius:50%;background:var(--fill);color:var(--label2);display:grid;place-items:center;flex:none}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;font-size:13px;color:var(--label2)}
+.tag{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--label);background:var(--card);padding:3px 8px;border-radius:7px}
+.tag i{width:7px;height:7px;border-radius:50%}
+.sh-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 max(16px,env(safe-area-inset-left,0px)) 16px}
+.sh-actions{flex:none;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;padding:10px max(16px,env(safe-area-inset-left,0px)) calc(env(safe-area-inset-bottom,0px) + 12px);background:var(--bar);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border-top:.5px solid var(--sep)}
+.act{height:54px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:600;text-decoration:none}
+.act.nav{background:var(--yellow);color:var(--on-yellow)}
+.act.call{background:var(--green);color:#fff}
+.act.tint{background:var(--tint);color:var(--on-tint)}
+.act.gray{background:var(--card);color:var(--tint)}
+.act.off{background:var(--fill);color:var(--label3);pointer-events:none}
+.card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--label2);font-weight:600;display:flex;align-items:center;gap:6px}
+.card p{margin:0;font-size:15.5px;line-height:1.45}
+.card ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.card li{font-size:15.5px;line-height:1.4;padding-left:18px;position:relative}
+.card li::before{content:"";position:absolute;left:3px;top:.55em;width:6px;height:6px;border-radius:50%;background:var(--tint)}
+.pains li::before{background:var(--red)}
+.hook{background:var(--tint-soft);border-radius:12px;padding:11px 12px;font-size:15.5px;line-height:1.42;margin-top:8px;position:relative}
+.hook:first-of-type{margin-top:0}
+.hook button{display:block;margin-top:6px;font-size:13px;font-weight:600;color:var(--tint)}
+.offer{background:linear-gradient(135deg,#0E8C8A,#0B5E6E);color:#fff;border-radius:var(--r);padding:16px;margin-bottom:12px}
+.offer h3{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;opacity:.85;font-weight:600}
+.offer p{margin:0;font-size:17px;line-height:1.38;font-weight:600}
+.offer small{display:block;margin-top:8px;font-size:12px;opacity:.8}
+.kv{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:.5px solid var(--sep)}
+.kv:first-child{border-top:0;padding-top:0}
+.kv span{font-size:12px;color:var(--label2);display:block}
+.kv a,.kv .v{font-size:16px;color:var(--tint);text-decoration:none;font-weight:500;word-break:break-word}
+.kv .v{color:var(--label)}
+.mini{height:30px;padding:0 11px;border-radius:999px;background:var(--fill);font-size:13px;font-weight:600;flex:none;display:inline-flex;align-items:center;text-decoration:none;color:var(--label)}
+.links{display:flex;flex-direction:column}
+.link{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:.5px solid var(--sep);text-decoration:none}
+.link:first-child{border-top:0;padding-top:2px}
+.link .li{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#fff;flex:none;font-size:13px;font-weight:700}
+.link b{display:block;font-size:16px;font-weight:600}
+.link small{display:block;font-size:12.5px;color:var(--label2)}
+.link svg.chev{margin-left:auto;color:var(--label3);flex:none}
+.note{font-size:12.5px;color:var(--label2);margin:4px 4px 14px;line-height:1.4}
+
+/* Forms */
+.field{display:block;background:var(--card);padding:0 14px;border-radius:0}
+.form{background:var(--card);border-radius:var(--r);overflow:hidden;margin-bottom:18px}
+.form label{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;position:relative}
+.form label+label::before{content:"";position:absolute;top:0;left:14px;right:0;border-top:.5px solid var(--sep)}
+.form label span{width:96px;flex:none;font-size:15px;color:var(--label2)}
+.form input,.form select,.form textarea{flex:1;min-width:0;border:0;outline:0;background:transparent;font-size:17px;padding:12px 0}
+.form textarea{min-height:84px;resize:none;line-height:1.4}
+.form label.top{align-items:flex-start}
+.form label.top span{padding-top:13px}
+.stages{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.stages button{height:32px;padding:0 12px;border-radius:999px;background:var(--card);font-size:14px;font-weight:600;box-shadow:0 0 0 .5px var(--sep) inset}
+.stages button[aria-pressed="true"]{background:var(--tint);color:var(--on-tint);box-shadow:none}
+.when{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px}
+.when button{height:32px;padding:0 12px;border-radius:999px;background:var(--fill);font-size:14px;font-weight:600}
+.when button[aria-pressed="true"]{background:var(--label);color:var(--bg)}
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl{display:flex;gap:10px;padding:9px 0;border-top:.5px solid var(--sep);font-size:14.5px}
+.tl:first-child{border-top:0;padding-top:0}
+.tl time{color:var(--label2);font-size:12.5px;width:74px;flex:none;font-variant-numeric:tabular-nums;padding-top:1px}
+.tl b{font-weight:600}
+.next{display:flex;align-items:center;gap:12px}
+.next .big{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.next .lbl{font-size:13px;color:var(--label2)}
+.danger{color:var(--red);font-weight:600;font-size:16px;padding:14px;width:100%;text-align:center;background:var(--card);border-radius:var(--r);margin-bottom:12px}
+.toast{position:fixed;z-index:1000;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);background:var(--label);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:15px;font-weight:600;box-shadow:var(--shadow);max-width:88vw;text-align:center}
+.opt{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;text-align:left;font-size:16px;font-weight:500;position:relative}
+.opt+.opt::before{content:"";position:absolute;top:0;left:56px;right:0;border-top:.5px solid var(--sep)}
+.opt .oi{width:30px;height:30px;border-radius:8px;background:var(--tint);color:#fff;display:grid;place-items:center;flex:none}
+.opt small{display:block;font-size:12.5px;color:var(--label2);font-weight:400}
+.metros{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.metros button{text-align:left;padding:10px 12px;border-radius:11px;background:var(--card);font-size:14px;font-weight:500}
+.install{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:22px;font-size:15px;line-height:1.45}
+.install b{display:block;font-size:16px;margin-bottom:4px}
+@media (prefers-reduced-motion: reduce){.sheet,.scrim,.press{transition:opacity .2s!important}.sheet{transform:none!important;opacity:0}.sheet.on{opacity:1}}
+</style>
+</head>
+<body>
+
+<!-- СЕГОДНЯ -->
+<section class="screen" id="s-today">
+  <div class="lt"><div><h1 id="hello">Сегодня</h1><div class="sub" id="todayDate"></div></div>
+    <button class="iconbtn press" id="btnSettings" aria-label="Настройки"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </div>
+  <div id="todayBody"></div>
+</section>
+
+<!-- КОМПАНИИ -->
+<section class="screen" id="s-base" hidden>
+  <div class="lt"><div><h1>Компании</h1><div class="sub" id="baseCount"></div></div>
+    <button class="pillbtn press" id="btnLoc"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3 3 10.5l7.5 3L13.5 21z"/></svg><span id="locLabel">Рядом со мной</span></button>
+  </div>
+  <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Название, улица, сфера" autocomplete="off" enterkeyhint="search"></label>
+  <div class="chips" id="chips"></div>
+  <div class="seg" id="seg">
+    <button data-f="all" aria-pressed="true">Все</button>
+    <button data-f="phone" aria-pressed="false">С телефоном</button>
+    <button data-f="web" aria-pressed="false">С сайтом</button>
+    <button data-f="new" aria-pressed="false">Не в работе</button>
+  </div>
+  <div id="baseList"></div>
+</section>
+
+<!-- КАРТА -->
+<section class="screen" id="s-map" hidden style="padding:0">
+  <div id="mapWrap"><div id="map"></div>
+    <div class="mapbar"><div class="chips" id="mapChips"></div></div>
+    <div class="maphint" id="mapHint" hidden>Нажмите на карту там, где вы сейчас</div>
+    <button class="mapfab press" id="btnMe" aria-label="Моё местоположение"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3 3 10.5l7.5 3L13.5 21z"/></svg></button>
+  </div>
+</section>
+
+<!-- МОИ КОНТАКТЫ -->
+<section class="screen" id="s-crm" hidden>
+  <div class="lt"><div><h1>Мои контакты</h1><div class="sub" id="crmCount"></div></div></div>
+  <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q2" type="search" placeholder="Имя, компания, телефон" autocomplete="off"></label>
+  <div class="chips" id="stageChips"></div>
+  <div style="height:12px"></div>
+  <div id="crmList"></div>
+</section>
+
+<button class="fab press" id="fab" aria-label="Добавить контакт"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Контакт</button>
+
+<nav class="tabbar" role="tablist">
+  <button role="tab" data-tab="today" aria-selected="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="m9 15 2 2 4-4"/></svg>Сегодня<span class="dot" id="dueDot" hidden></span></button>
+  <button role="tab" data-tab="base" aria-selected="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 21V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v15"/><path d="M15 10h3a2 2 0 0 1 2 2v9M3 21h18M8 8h3M8 12h3M8 16h3"/></svg>Компании</button>
+  <button role="tab" data-tab="map" aria-selected="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/></svg>Карта</button>
+  <button role="tab" data-tab="crm" aria-selected="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg>Контакты</button>
+</nav>
+
+<div id="layer"></div>
+
+<script src="data.js"></script>
+<script src="playbooks.js"></script>
+<script src="leaflet.js"></script>
+<script>
+"use strict";
+/* ============ helpers ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const DAY = 864e5;
+const COLORS = {"Производство":"#E4572E","IT-сектор":"#2F6FED","Логистика":"#8A5CF6","Консалтинг":"#0F9D8F","Медицина":"#E0457B","Обучение":"#F29E0B","Финансы":"#15803D","Застройщики":"#A16207","Спорт":"#0EA5E9","Госорганы":"#64748B","Посольства и межд.":"#7C3AED","Отели и MICE":"#DB2777","Школы и сады":"#CA8A04","Торговля":"#0891B2","Реклама и медиа":"#C026D3","Компании":"#78716C","Мой контакт":"#0E8C8A"};
+const CAT_ORDER = ["Производство","IT-сектор","Логистика","Консалтинг","Медицина","Обучение","Финансы","Застройщики","Спорт","Госорганы","Посольства и межд.","Отели и MICE","Школы и сады","Торговля","Реклама и медиа","Компании"];
+const ICON = {
+  nav:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3 3 10.5l7.5 3L13.5 21z"/></svg>',
+  call:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>',
+  plus:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  check:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>',
+  x:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  chev:'<svg class="chev" width="9" height="15" viewBox="0 0 9 15" fill="none" stroke="currentColor" stroke-width="2"><path d="m1.5 1.5 6 6-6 6"/></svg>',
+  tg:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 4.3 2.9 11.5c-1.3.5-1.3 1.2-.2 1.6l4.8 1.5 1.8 5.6c.2.6.4.8.9.8.4 0 .6-.2.9-.5l2.3-2.2 4.7 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.3-.5-1.9-1.4-1.5zM9 14.2l9-5.7c.4-.3.8-.1.5.2l-7.6 6.9-.3 3.2z"/></svg>',
+  cal:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>'
+};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch (e) { return d } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true } catch (e) { toast("Не удалось сохранить: память заполнена"); return false } }
+};
+function toast(t, ms = 2200) { document.querySelectorAll(".toast").forEach(x => x.remove()); const el = document.createElement("div"); el.className = "toast"; el.textContent = t; document.body.appendChild(el); setTimeout(() => el.remove(), ms) }
+async function copy(t) { try { await navigator.clipboard.writeText(t); toast("Скопировано") } catch (e) { const a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); toast("Скопировано") } catch (_) { toast(t) } a.remove() } }
+const fmtPhone = p => p && p.length === 13 ? `+998 ${p.slice(4,6)} ${p.slice(6,9)} ${p.slice(9,11)} ${p.slice(11,13)}` : (p || "");
+function normPhone(raw) { let d = String(raw || "").replace(/\D/g, ""); if (d.length === 9) d = "998" + d; if (d.length === 7) d = "99871" + d; return d.length >= 11 ? "+" + d : (raw || "").trim() }
+function km(a, b) { const R = 6371, t = Math.PI / 180, dl = (b[0]-a[0])*t, dn = (b[1]-a[1])*t, h = Math.sin(dl/2)**2 + Math.cos(a[0]*t)*Math.cos(b[0]*t)*Math.sin(dn/2)**2; return 2*R*Math.asin(Math.sqrt(h)) }
+const fmtKm = d => d < 1 ? Math.max(10, Math.round(d*100)*10) + " м" : (d < 10 ? d.toFixed(1).replace(".", ",") : Math.round(d)) + " км";
+const startOfDay = (t = Date.now()) => { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime() };
+const at10 = days => { const d = new Date(startOfDay() + days*DAY); d.setHours(10,0,0,0); return d.getTime() };
+const MONTHS = ["янв","фев","мар","апр","мая","июн","июл","авг","сен","окт","ноя","дек"];
+function fmtDate(t, withTime) { if (!t) return ""; const d = new Date(t); const diff = Math.round((startOfDay(t) - startOfDay()) / DAY);
+  const rel = diff === 0 ? "Сегодня" : diff === 1 ? "Завтра" : diff === -1 ? "Вчера" : `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return withTime ? `${rel}, ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}` : rel }
+const initials = n => (String(n).replace(/^[\s"«“'„(]+/, "").match(/[A-Za-zА-Яа-яЁёЎўҚқҒғҲҳ0-9]/) || ["•"])[0].toUpperCase();
+
+/* ============ state ============ */
+const LEADS = window.LEADS || [];
+LEADS.forEach(x => { x._n = x.n.replace(/^[\s"«“'„]+/, ""); x._s = (x.n + " " + (x.al || "") + " " + (x.a || "") + " " + x.c).toLowerCase() });
+const byId = Object.fromEntries(LEADS.map(x => [x.id, x]));
+const DEF_SETTINGS = { intervals: [3, 7, 14, 30], notify: false, lastNotify: 0 };
+let crm = store.get("oasis.crm.v1", { contacts: [], settings: DEF_SETTINGS });
+crm.settings = Object.assign({}, DEF_SETTINGS, crm.settings);
+const saveCrm = () => { store.set("oasis.crm.v1", crm); updateBadge() };
+const S = { tab: "today", cat: "Все", q: "", f: "all", me: store.get("oasis.me", null), shown: 60, stage: "all", q2: "" };
+const STAGES = [["new","Новый"],["contacted","Первый контакт"],["talks","Переговоры"],["meeting","Встреча"],["proposal","КП отправлено"],["client","Клиент"],["lost","Отказ"]];
+const stageName = k => (STAGES.find(s => s[0] === k) || ["", "Новый"])[1];
+const TOUCH = [["call","Звонок"],["msg","Сообщение"],["meet","Встреча"],["kp","Отправил КП"],["visit","Визит без встречи"]];
+const leadContact = id => crm.contacts.find(c => c.leadId === id);
+
+/* ============ links ============ */
+const routeUrl = (la, lo, q) => { const to = la ? `${la},${lo}` : encodeURIComponent("Ташкент, " + q); const from = S.me ? `${S.me.p[0]},${S.me.p[1]}` : ""; return `https://yandex.uz/maps/?rtext=${from}~${to}&rtt=auto` };
+const naviUrl = (la, lo) => `yandexnavi://build_route_on_map?lat_to=${la}&lon_to=${lo}`;
+const telUrl = p => "tel:" + String(p).replace(/[^\d+]/g, "");
+const tgUrl = p => "https://t.me/" + String(p).replace(/[^\d+]/g, "");
+const waUrl = p => "https://wa.me/" + String(p).replace(/\D/g, "");
+function osmUrl(id) { const m = /^([nwr])(\d+)$/.exec(id || ""); return m ? `https://www.openstreetmap.org/${{n:"node",w:"way",r:"relation"}[m[1]]}/${m[2]}` : null }
+const yaHere = (la, lo) => `https://yandex.uz/maps/?ll=${lo}%2C${la}&z=19&mode=whatshere&whatshere%5Bpoint%5D=${lo}%2C${la}&whatshere%5Bzoom%5D=19`;
+const gisHere = (la, lo) => `https://2gis.uz/tashkent/geo/${lo}%2C${la}`;
+const gSearch = n => `https://www.google.com/search?q=${encodeURIComponent('"' + n + '" Ташкент')}`;
+
+/* ============ sheets ============ */
+let sheetStack = [];
+function openSheet({ head, body, actions = "", onClose }) {
+  const layer = $("#layer");
+  const scrim = document.createElement("div"); scrim.className = "scrim";
+  const sh = document.createElement("div"); sh.className = "sheet"; sh.setAttribute("role", "dialog"); sh.setAttribute("aria-modal", "true");
+  sh.innerHTML = `<div class="sh-head"><div class="grab"></div>${head}</div><div class="sh-body">${body}</div>${actions ? `<div class="sh-actions">${actions}</div>` : `<div style="height:calc(env(safe-area-inset-bottom,0px) + 8px)"></div>`}`;
+  layer.append(scrim, sh);
+  sheetStack.forEach(o => o.sh.style.transform = "translateY(0) scale(.96)");
+  requestAnimationFrame(() => { scrim.classList.add("on"); sh.classList.add("on") });
+  const obj = { sh, scrim, onClose };
+  sheetStack.push(obj);
+  const close = () => closeSheet(obj);
+  scrim.onclick = close;
+  sh.querySelectorAll("[data-close]").forEach(b => b.onclick = close);
+  // drag to dismiss
+  const headEl = sh.querySelector(".sh-head"); let y0 = null, dy = 0, t0 = 0;
+  headEl.addEventListener("pointerdown", e => { if (e.target.closest("button")) return; y0 = e.clientY; t0 = performance.now(); dy = 0; sh.style.transition = "none"; headEl.setPointerCapture(e.pointerId) });
+  headEl.addEventListener("pointermove", e => { if (y0 == null) return; dy = e.clientY - y0; sh.style.transform = `translateY(${dy > 0 ? dy : dy / 6}px)` });
+  const end = () => { if (y0 == null) return; const v = dy / Math.max(1, performance.now() - t0); y0 = null; sh.style.transition = ""; if (dy > 120 || v > .6) close(); else sh.style.transform = "" };
+  headEl.addEventListener("pointerup", end); headEl.addEventListener("pointercancel", end);
+  return obj;
+}
+function closeSheet(obj) {
+  obj = obj || sheetStack[sheetStack.length - 1]; if (!obj) return;
+  sheetStack = sheetStack.filter(o => o !== obj);
+  obj.sh.style.transform = "translateY(100%)"; obj.scrim.classList.remove("on");
+  const top = sheetStack[sheetStack.length - 1]; if (top) top.sh.style.transform = "";
+  setTimeout(() => { obj.sh.remove(); obj.scrim.remove() }, 340);
+  obj.onClose && obj.onClose();
+}
+const closeAll = () => [...sheetStack].reverse().forEach(o => closeSheet(o));
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet() });
+const headHtml = (title, metaHtml = "") => `<div class="sh-title"><h2>${title}</h2><button class="close press" data-close aria-label="Закрыть">${ICON.x}</button></div>${metaHtml ? `<div class="meta">${metaHtml}</div>` : ""}`;
+
+/* ============ company card ============ */
+function openLead(id) {
+  const x = byId[id]; if (!x) return;
+  const pb = window.pickPlaybook(x);
+  const c = leadContact(id);
+  const d = S.me && x.la ? km(S.me.p, [x.la, x.lo]) : null;
+  const phones = x.p || [];
+  const meta = `<span class="tag"><i style="background:${COLORS[x.c]}"></i>${esc(x.c)}</span>${d != null ? `<span>${fmtKm(d)} от вас</span>` : ""}${x.br ? `<span>сеть · ${x.br} точек</span>` : ""}${c ? `<span class="badge b-work">в работе · ${esc(stageName(c.stage))}</span>` : ""}`;
+  const links = [];
+  if (x.w) links.push(`<a class="link press" href="${esc(x.w)}" target="_blank" rel="noopener"><span class="li" style="background:var(--blue)">www</span><span><b>Официальный сайт</b><small>${esc(x.w.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</small></span>${ICON.chev}</a>`);
+  const ou = osmUrl(x.osm);
+  if (ou) links.push(`<a class="link press" href="${ou}" target="_blank" rel="noopener"><span class="li" style="background:#7EBC6F">OSM</span><span><b>Карточка этой организации</b><small>OpenStreetMap — все известные данные: телефон, сайт, часы</small></span>${ICON.chev}</a>`);
+  if (x.la) links.push(`<a class="link press" href="${yaHere(x.la, x.lo)}" target="_blank" rel="noopener"><span class="li" style="background:#FC3F1D">Я</span><span><b>Яндекс Карты — эта точка</b><small>Организация по этому адресу, отзывы и телефоны</small></span>${ICON.chev}</a>`);
+  if (x.la) links.push(`<a class="link press" href="${gisHere(x.la, x.lo)}" target="_blank" rel="noopener"><span class="li" style="background:#19AA1E">2Г</span><span><b>2ГИС — это здание</b><small>Удобно проверить номер и часы работы</small></span>${ICON.chev}</a>`);
+  links.push(`<a class="link press" href="${gSearch(x.n)}" target="_blank" rel="noopener"><span class="li" style="background:#4285F4">G</span><span><b>Google по точному названию</b><small>Соцсети, новости, вакансии компании</small></span>${ICON.chev}</a>`);
+  const body = `
+    <div class="card"><h3>О компании</h3><p><b>${esc(x.n)}</b>${x.al ? ` (${esc(x.al)})` : ""} — ${esc(pb.about.charAt(0).toLowerCase() + pb.about.slice(1))}</p></div>
+    <div class="offer"><h3>Оффер, от которого сложно отказаться</h3><p>${esc(pb.offer)}</p><small>Подстройте цифры под свою маржу перед звонком</small></div>
+    <div class="card"><h3>С чего начать</h3><p>${esc(pb.start)}</p></div>
+    <div class="card"><h3>Хуки для разговора</h3>${pb.hooks.map(h => `<div class="hook">${esc(h)}<button data-copy="${esc(h.replace(/[«»]/g, ""))}">Скопировать</button></div>`).join("")}</div>
+    <div class="card pains"><h3>Боли, которые вы закрываете</h3><ul>${pb.pains.map(p => `<li>${esc(p)}</li>`).join("")}</ul></div>
+    <div class="card"><h3>Контакты</h3>
+      ${phones.length ? phones.map(p => `<div class="kv"><div><span>Телефон${x.warn ? " · проверьте, похож на шаблонный" : ""}</span><a href="${telUrl(p)}">${fmtPhone(p)}</a></div><button class="mini press" data-copy="${fmtPhone(p)}">Копировать</button></div>`).join("") : `<div class="kv"><div><span>Телефон</span><div class="v">Нет в базе — найдите по ссылкам ниже</div></div></div>`}
+      <div class="kv"><div><span>Адрес</span><div class="v">${esc(x.a || "Точка отмечена на карте")}</div></div>${x.a ? `<button class="mini press" data-copy="${esc(x.a)}">Копировать</button>` : ""}</div>
+      ${x.e ? `<div class="kv"><div><span>Email</span><a href="mailto:${esc(x.e)}">${esc(x.e)}</a></div><button class="mini press" data-copy="${esc(x.e)}">Копировать</button></div>` : ""}
+    </div>
+    <div class="card"><h3>Проверить и узнать больше</h3><div class="links">${links.join("")}</div></div>
+    <p class="note">Описание, боли и оффер подобраны по типу организации («${esc(pb.title)}»), а не по исследованию именно этой компании. Перед звонком откройте сайт или карточку выше. Данные: OpenStreetMap${x.src === "old" ? " и ваша прежняя база" : ""}.</p>`;
+  const actions = `
+    <a class="act nav press" href="${routeUrl(x.la, x.lo, x.a || x.n)}" target="_blank" rel="noopener">${ICON.nav}Маршрут</a>
+    ${phones.length ? `<a class="act call press" href="${telUrl(phones[0])}" id="aCall">${ICON.call}Позвонить</a>` : `<a class="act off">${ICON.call}Нет номера</a>`}
+    <button class="act tint press" id="aWork">${c ? ICON.check + "Открыть в CRM" : ICON.plus + "В работу"}</button>`;
+  const sh = openSheet({ head: headHtml(esc(x.n), meta), body, actions }).sh;
+  wireCopy(sh);
+  sh.querySelector("#aWork").onclick = () => {
+    let cc = leadContact(id);
+    if (!cc) { cc = newContact({ name: "", company: x.n, phone: phones[0] || "", leadId: id, stage: "new", next: at10(0), note: "" }); toast("Добавлено в «Мои контакты» — напомню сегодня") }
+    openContact(cc.id);
+  };
+  const ac = sh.querySelector("#aCall");
+  if (ac) ac.addEventListener("click", () => { if (!leadContact(id)) newContact({ name: "", company: x.n, phone: phones[0], leadId: id, stage: "new", next: at10(0) }); setTimeout(() => askLogCall(leadContact(id).id), 900) });
+}
+function wireCopy(root) { root.querySelectorAll("[data-copy]").forEach(b => b.onclick = e => { e.preventDefault(); copy(b.dataset.copy) }) }
+
+/* ============ CRM core ============ */
+function newContact(o) {
+  const c = Object.assign({ id: "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: "", company: "", role: "", phone: "", tg: "", note: "", stage: "new", touches: [], next: at10(0), meetAt: null, created: Date.now() }, o);
+  crm.contacts.unshift(c); saveCrm(); renderAll(); return c;
+}
+const getC = id => crm.contacts.find(c => c.id === id);
+function nextAfterTouch(c) { const iv = crm.settings.intervals; const n = c.touches.length; if (c.stage === "lost") return null; if (c.stage === "client") return at10(30); return at10(iv[Math.min(n - 1, iv.length - 1)] || 7) }
+function logTouch(cid, type, note) {
+  const c = getC(cid); if (!c) return;
+  c.touches.unshift({ t: Date.now(), type, note: note || "" });
+  if (c.stage === "new") c.stage = "contacted";
+  if (type === "kp" && ["new","contacted","talks"].includes(c.stage)) c.stage = "proposal";
+  if (type === "meet" && ["new","contacted","talks"].includes(c.stage)) c.stage = "meeting";
+  c.next = nextAfterTouch(c); saveCrm(); renderAll();
+  toast(c.next ? `Касание записано. Напомню: ${fmtDate(c.next)}` : "Касание записано");
+}
+function askLogCall(cid) {
+  const c = getC(cid); if (!c) return;
+  const o = openSheet({ head: headHtml("Как прошёл звонок?", `<span>${esc(c.company || c.name)}</span>`),
+    body: `<div class="form"><label class="top"><span>Итог</span><textarea id="callNote" placeholder="С кем говорили, о чём договорились"></textarea></label></div>
+    <div class="stages">${[["talks","Интерес есть"],["meeting","Назначили встречу"],["contacted","Не дозвонился"],["lost","Отказ"]].map(s => `<button data-s="${s[0]}">${s[1]}</button>`).join("")}</div>`,
+    actions: `<button class="act gray press" data-close>Позже</button><button class="act tint press" id="saveCall">${ICON.check}Записать</button>` });
+  let st = null;
+  o.sh.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { st = b.dataset.s; o.sh.querySelectorAll("[data-s]").forEach(x => x.setAttribute("aria-pressed", x === b)) });
+  o.sh.querySelector("#saveCall").onclick = () => { const cc = getC(cid); if (st) cc.stage = st; logTouch(cid, "call", o.sh.querySelector("#callNote").value.trim()); closeSheet(o); };
+}
+function isDue(c) { return c.next && c.stage !== "lost" && c.next <= startOfDay() + DAY - 1 }
+
+function openContact(cid) {
+  const c = getC(cid); if (!c) return;
+  const lead = c.leadId ? byId[c.leadId] : null;
+  const title = esc(c.name || c.company || "Контакт");
+  const meta = `${c.name && c.company ? `<span>${esc(c.company)}</span>` : ""}${c.role ? `<span>· ${esc(c.role)}</span>` : ""}<span class="badge b-work">${esc(stageName(c.stage))}</span>`;
+  const iv = crm.settings.intervals;
+  const body = `
+    <div class="card"><div class="next"><div style="flex:1"><div class="lbl">Следующее касание</div><div class="big" style="color:${isDue(c) ? "var(--red)" : "var(--label)"}">${c.next ? fmtDate(c.next, true) : "не запланировано"}</div></div><button class="mini press" id="toCal">${ICON.cal}&nbsp;В календарь</button></div>
+      <div class="when">${[["Сегодня",0],["Завтра",1],[`+${iv[0]} дн`,iv[0]],["+1 нед",7],["+2 нед",14],["+1 мес",30]].map(w => `<button data-d="${w[1]}">${w[0]}</button>`).join("")}</div>
+      ${c.meetAt ? `<div class="kv" style="margin-top:10px"><div><span>Встреча</span><div class="v">${fmtDate(c.meetAt, true)}</div></div></div>` : ""}
+    </div>
+    <div class="ghead"><span>Этап</span></div>
+    <div class="stages">${STAGES.map(s => `<button data-st="${s[0]}" aria-pressed="${c.stage === s[0]}">${s[1]}</button>`).join("")}</div>
+    <div class="ghead"><span>Записать касание</span></div>
+    <div class="stages">${TOUCH.map(t => `<button data-t="${t[0]}">${t[1]}</button>`).join("")}</div>
+    <div class="card"><h3>Контакты</h3>
+      ${c.phone ? `<div class="kv"><div><span>Телефон</span><a href="${telUrl(c.phone)}">${esc(fmtPhone(c.phone))}</a></div><button class="mini press" data-copy="${esc(fmtPhone(c.phone))}">Копировать</button></div>` : ""}
+      ${c.tg ? `<div class="kv"><div><span>Telegram</span><a href="${c.tg.startsWith("@") ? "https://t.me/" + esc(c.tg.slice(1)) : tgUrl(c.tg)}" target="_blank" rel="noopener">${esc(c.tg)}</a></div></div>` : ""}
+      ${c.phone ? `<div class="kv"><div><span>Написать</span><div class="v" style="display:flex;gap:8px;margin-top:4px"><a class="mini press" href="${tgUrl(c.phone)}" target="_blank" rel="noopener">${ICON.tg}&nbsp;Telegram</a><a class="mini press" href="${waUrl(c.phone)}" target="_blank" rel="noopener">WhatsApp</a></div></div></div>` : ""}
+      ${c.note ? `<div class="kv"><div><span>Заметки</span><div class="v" style="white-space:pre-wrap">${esc(c.note)}</div></div></div>` : ""}
+      ${!c.phone && !c.tg && !c.note ? `<p style="color:var(--label2);font-size:15px">Добавьте телефон и заметки — кнопка «Изменить» внизу.</p>` : ""}
+    </div>
+    ${lead ? `<button class="card press" id="openLead" style="width:100%;text-align:left;display:flex;align-items:center;gap:12px"><span class="av" style="background:${COLORS[lead.c]}">${initials(lead.n)}</span><span style="flex:1;min-width:0"><b style="display:block;font-size:16px">${esc(lead.n)}</b><small style="color:var(--label2);font-size:13px">Хуки, боли и оффер для этой компании</small></span>${ICON.chev}</button>` : ""}
+    <div class="card"><h3>История касаний · ${c.touches.length}</h3>${c.touches.length ? `<div class="timeline">${c.touches.map(t => `<div class="tl"><time>${fmtDate(t.t, true).replace(", ", "<br>")}</time><div><b>${esc((TOUCH.find(x => x[0] === t.type) || ["", t.type])[1])}</b>${t.note ? `<div style="color:var(--label2)">${esc(t.note)}</div>` : ""}</div></div>`).join("")}</div>` : `<p style="color:var(--label2);font-size:15px">Пока нет. После первого касания я сам напомню через ${iv[0]} дн., потом через ${iv[1]}, ${iv[2]} и ${iv[3]} дн.</p>`}</div>
+    <button class="danger press" id="delC">Удалить контакт</button>`;
+  const phone = c.phone || (lead && lead.p && lead.p[0]);
+  const actions = `
+    ${lead && lead.la ? `<a class="act nav press" href="${routeUrl(lead.la, lead.lo, lead.a || lead.n)}" target="_blank" rel="noopener">${ICON.nav}Маршрут</a>` : ""}
+    ${phone ? `<a class="act call press" href="${telUrl(phone)}" id="cCall">${ICON.call}Позвонить</a>` : ""}
+    <button class="act gray press" id="editC"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Изменить</button>`;
+  const o = openSheet({ head: headHtml(title, meta), body, actions });
+  const sh = o.sh; wireCopy(sh);
+  sh.querySelectorAll("[data-st]").forEach(b => b.onclick = () => { c.stage = b.dataset.st; if (c.stage === "lost") c.next = null; else if (c.stage === "client" && !c.next) c.next = at10(30); saveCrm(); renderAll(); sh.querySelectorAll("[data-st]").forEach(x => x.setAttribute("aria-pressed", x === b)); toast("Этап: " + stageName(c.stage)) });
+  sh.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { closeSheet(o); if (b.dataset.t === "call") askLogCall(cid); else { logTouch(cid, b.dataset.t); openContact(cid) } });
+  sh.querySelectorAll("[data-d]").forEach(b => b.onclick = () => { c.next = at10(+b.dataset.d); saveCrm(); renderAll(); closeSheet(o); openContact(cid); toast("Напомню: " + fmtDate(c.next)) });
+  sh.querySelector("#toCal").onclick = () => addToCalendar(c);
+  sh.querySelector("#editC").onclick = () => { closeSheet(o); openForm(cid) };
+  sh.querySelector("#delC").onclick = () => { const btn = sh.querySelector("#delC"); if (btn.dataset.sure) { crm.contacts = crm.contacts.filter(x => x.id !== cid); saveCrm(); renderAll(); closeSheet(o); toast("Контакт удалён") } else { btn.dataset.sure = 1; btn.textContent = "Нажмите ещё раз, чтобы удалить" } };
+  const ol = sh.querySelector("#openLead"); if (ol) ol.onclick = () => openLead(lead.id);
+  const cc = sh.querySelector("#cCall"); if (cc) cc.addEventListener("click", () => setTimeout(() => { closeSheet(o); askLogCall(cid) }, 900));
+}
+
+function openForm(cid) {
+  const c = cid ? getC(cid) : null;
+  const v = k => esc(c ? (c[k] || "") : "");
+  const toLocal = t => { if (!t) return ""; const d = new Date(t); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16) };
+  const o = openSheet({ head: headHtml(c ? "Изменить контакт" : "Новый контакт"),
+    body: `<div class="form">
+      <label><span>Имя</span><input id="fName" value="${v("name")}" placeholder="Азиз Каримов" autocomplete="name"></label>
+      <label><span>Компания</span><input id="fCompany" value="${v("company")}" placeholder="Название организации" list="leadNames"></label>
+      <label><span>Должность</span><input id="fRole" value="${v("role")}" placeholder="HR, офис-менеджер, директор"></label>
+      <label><span>Телефон</span><input id="fPhone" value="${v("phone")}" type="tel" inputmode="tel" placeholder="+998 90 123 45 67"></label>
+      <label><span>Telegram</span><input id="fTg" value="${v("tg")}" placeholder="@username"></label>
+    </div>
+    <div class="form">
+      <label><span>Встреча</span><input id="fMeet" type="datetime-local" value="${toLocal(c && c.meetAt)}"></label>
+      <label class="top"><span>Заметки</span><textarea id="fNote" placeholder="О чём договорились, что предложить на встрече">${v("note")}</textarea></label>
+    </div>
+    <p class="note">Если указать встречу, напоминание поставлю на её время. Без встречи напомню сегодня, а после каждого касания — автоматически через ${crm.settings.intervals.join(", ")} дн.</p>`,
+    actions: `<button class="act gray press" data-close>Отмена</button><button class="act tint press" id="fSave">${ICON.check}Сохранить</button>` });
+  const sh = o.sh;
+  setTimeout(() => { if (!c) sh.querySelector("#fName").focus() }, 380);
+  sh.querySelector("#fSave").onclick = () => {
+    const val = id => sh.querySelector(id).value.trim();
+    const name = val("#fName"), company = val("#fCompany");
+    if (!name && !company) { toast("Укажите имя или компанию"); return }
+    const meetV = val("#fMeet"); const meetAt = meetV ? new Date(meetV).getTime() : null;
+    const data = { name, company, role: val("#fRole"), phone: normPhone(val("#fPhone")), tg: val("#fTg"), note: val("#fNote"), meetAt };
+    const match = !c && LEADS.find(l => l.n.toLowerCase() === company.toLowerCase());
+    if (c) { Object.assign(c, data); if (meetAt && (!c.next || meetAt < c.next || c.next < Date.now())) c.next = meetAt - 60 * 60 * 1000; saveCrm(); renderAll(); closeSheet(o); openContact(c.id); toast("Сохранено") }
+    else { const n = newContact(Object.assign(data, { leadId: match ? match.id : null, stage: meetAt ? "meeting" : "new", next: meetAt ? meetAt - 60 * 60 * 1000 : at10(0) })); closeSheet(o); openContact(n.id); toast(meetAt ? "Напомню за час до встречи" : "Контакт добавлен") }
+  };
+}
+
+/* ============ calendar (.ics) — гарантированное напоминание через Календарь iPhone ============ */
+function addToCalendar(c) {
+  const when = c.meetAt && c.meetAt > Date.now() ? c.meetAt : (c.next || at10(1));
+  const title = (c.meetAt ? "Встреча: " : "Связаться: ") + (c.name || "") + (c.company ? " — " + c.company : "");
+  const pad = n => String(n).padStart(2, "0");
+  const f = t => { const d = new Date(t); return d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + "T" + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + "00Z" };
+  const descr = [c.phone && "Тел: " + fmtPhone(c.phone), c.role, c.note].filter(Boolean).join("\\n").replace(/[,;]/g, m => "\\" + m);
+  const ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Oasis B2B//RU","BEGIN:VEVENT","UID:" + c.id + "-" + when + "@oasis-b2b","DTSTAMP:" + f(Date.now()),"DTSTART:" + f(when),"DTEND:" + f(when + 30 * 60 * 1000),"SUMMARY:" + title.replace(/[,;]/g, m => "\\" + m),"DESCRIPTION:" + descr,"BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:" + title.replace(/[,;]/g, m => "\\" + m),"TRIGGER:-PT15M","END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
+  const gcal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${f(when)}/${f(when + 30 * 60 * 1000)}&details=${encodeURIComponent(descr.replace(/\\n/g, "\n").replace(/\\/g, ""))}`;
+  const o = openSheet({ head: headHtml("Напоминание в календарь", `<span>${fmtDate(when, true)}</span>`),
+    body: `<div class="group"><button class="opt press" id="icsBtn"><span class="oi">${ICON.cal}</span><span>Календарь iPhone<small>Откроется событие с напоминанием за 15 минут — нажмите «Добавить»</small></span></button>
+      <a class="opt press" href="${gcal}" target="_blank" rel="noopener" style="text-decoration:none"><span class="oi" style="background:#4285F4">G</span><span>Google Календарь<small>Если пользуетесь им на телефоне</small></span></a></div>
+      <p class="note">Календарь пришлёт уведомление, даже если приложение закрыто. Это самый надёжный способ не пропустить касание.</p>` });
+  o.sh.querySelector("#icsBtn").onclick = async () => {
+    const file = new File([ics], "oasis-reminder.ics", { type: "text/calendar" });
+    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title }); return } } catch (e) { if (e.name === "AbortError") return }
+    const url = URL.createObjectURL(file); const a = document.createElement("a"); a.href = url; a.download = "oasis-reminder.ics"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+  };
+}
+
+/* ============ reminders: badge + notification при открытии ============ */
+function dueList() { return crm.contacts.filter(isDue).sort((a, b) => a.next - b.next) }
+function updateBadge() {
+  const n = dueList().length; const dot = $("#dueDot"); dot.hidden = !n; dot.textContent = n > 99 ? "99+" : n;
+  try { if ("setAppBadge" in navigator) n ? navigator.setAppBadge(n) : navigator.clearAppBadge() } catch (e) {}
+}
+async function maybeNotify() {
+  if (!crm.settings.notify || !("Notification" in window) || Notification.permission !== "granted") return;
+  const due = dueList(); if (!due.length) return;
+  if (Date.now() - (crm.settings.lastNotify || 0) < 6 * 3600e3) return;
+  crm.settings.lastNotify = Date.now(); store.set("oasis.crm.v1", crm);
+  const body = due.slice(0, 3).map(c => c.company || c.name).join(", ") + (due.length > 3 ? ` и ещё ${due.length - 3}` : "");
+  try { const reg = await navigator.serviceWorker?.ready; if (reg) reg.showNotification(`Пора напомнить о себе: ${due.length}`, { body, icon: "icon-192.png", badge: "icon-192.png", tag: "oasis-due" }); else new Notification(`Пора напомнить о себе: ${due.length}`, { body }) } catch (e) {}
+}
+async function enableNotify() {
+  if (!("Notification" in window)) { toast("Уведомления работают, когда приложение добавлено на экран «Домой»", 3200); return }
+  const p = await Notification.requestPermission();
+  crm.settings.notify = p === "granted"; saveCrm();
+  toast(p === "granted" ? "Уведомления включены" : "Уведомления не разрешены — включите их в Настройках iPhone", 3000);
+  renderToday(); maybeNotify();
+}
+
+/* ============ location ============ */
+function setMe(p, label) { S.me = { p, label }; store.set("oasis.me", S.me); $("#locLabel").textContent = label; closeAll(); renderAll(); if (map) { drawMe(); map.setView(p, 15) } }
+function gps(silent) {
+  if (!navigator.geolocation) { if (!silent) toast("GPS недоступен — выберите метро"); return }
+  if (!silent) toast("Определяю местоположение…");
+  navigator.geolocation.getCurrentPosition(pos => setMe([pos.coords.latitude, pos.coords.longitude], "Я здесь"), () => { if (!silent) toast("Не удалось определить. Разрешите геолокацию или выберите метро", 3200) }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+}
+function openLoc() {
+  const o = openSheet({ head: headHtml("Где вы сейчас?", "<span>Чтобы показать ближайшие компании</span>"),
+    body: `<div class="group"><button class="opt press" id="oGps"><span class="oi">${ICON.nav}</span><span>Определить по GPS<small>Телефон спросит разрешение — нажмите «Разрешить»</small></span></button>
+      <button class="opt press" id="oMap"><span class="oi" style="background:var(--orange)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/></svg></span><span>Указать точку на карте<small>Нажмите на карту, где вы находитесь</small></span></button></div>
+      <div class="ghead"><span>Или станция метро</span></div><div class="metros">${(window.METRO || []).map((m, i) => `<button class="press" data-m="${i}">${esc(m[0])}</button>`).join("")}</div><div style="height:12px"></div>` });
+  o.sh.querySelector("#oGps").onclick = () => gps(false);
+  o.sh.querySelector("#oMap").onclick = () => { closeAll(); go("map"); picking = true; $("#mapHint").hidden = false };
+  o.sh.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { const m = METRO[+b.dataset.m]; setMe([m[1], m[2]], "м. " + m[0]) });
+}
+
+/* ============ rendering: companies ============ */
+function filtered(ignoreCat) {
+  const q = S.q.trim().toLowerCase();
+  let arr = LEADS.filter(x => (ignoreCat || S.cat === "Все" || x.c === S.cat) && (!q || x._s.includes(q)) &&
+    (S.f !== "phone" || x.p) && (S.f !== "web" || x.w) && (S.f !== "new" || !leadContact(x.id)));
+  if (S.me) { arr.forEach(x => x._d = x.la ? km(S.me.p, [x.la, x.lo]) : 1e9); arr.sort((a, b) => a._d - b._d) }
+  else { arr.forEach(x => x._d = null); arr.sort((a, b) => ((b.p ? 2 : 0) + (b.w ? 1 : 0)) - ((a.p ? 2 : 0) + (a.w ? 1 : 0)) || a._n.localeCompare(b._n, "ru")) }
+  return arr;
+}
+function chipsHtml(base) { const cnt = {}; base.forEach(x => cnt[x.c] = (cnt[x.c] || 0) + 1); return ["Все", ...CAT_ORDER.filter(c => cnt[c])].map(c => `<button class="chip press" data-c="${esc(c)}" aria-pressed="${S.cat === c}">${c !== "Все" ? `<i style="background:${COLORS[c]}"></i>` : ""}${esc(c)} <em>${c === "Все" ? base.length : cnt[c]}</em></button>`).join("") }
+function leadRow(x) {
+  const c = leadContact(x.id);
+  const sub = [x._d != null && x._d < 1e8 ? `<b>${fmtKm(x._d)}</b>` : "", esc(x.c), esc(x.a || "")].filter(Boolean).join(" · ");
+  return `<div class="row" data-lead="${x.id}"><span class="av" style="background:${COLORS[x.c]}">${initials(x.n)}</span><div class="rinfo"><div class="rt">${c ? `<span class="badge b-work">в работе</span>` : ""}${esc(x.n)}</div><div class="rs">${sub}</div></div>
+    <div class="racts"><a class="rb nav press" href="${routeUrl(x.la, x.lo, x.a || x.n)}" target="_blank" rel="noopener" aria-label="Маршрут">${ICON.nav}</a><a class="rb call press ${x.p ? "" : "off"}" href="${x.p ? telUrl(x.p[0]) : "#"}" data-callc="${x.id}" aria-label="Позвонить">${ICON.call}</a></div></div>`;
+}
+let cur = [];
+function renderBase() {
+  const base = filtered(true); $("#chips").innerHTML = chipsHtml(base);
+  cur = filtered(false);
+  $("#baseCount").textContent = `${cur.length.toLocaleString("ru")} · ${cur.filter(x => x.p).length.toLocaleString("ru")} с телефоном`;
+  const L = $("#baseList");
+  if (!cur.length) { L.innerHTML = `<div class="empty"><b>Ничего не нашлось</b>Попробуйте другое слово или уберите фильтр</div>`; return }
+  L.innerHTML = `<div class="group">${cur.slice(0, S.shown).map(leadRow).join("")}</div>${cur.length > S.shown ? `<button class="more" id="more">Показать ещё</button>` : ""}`;
+  const m = $("#more"); if (m) io.observe(m);
+}
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); S.shown += 80; renderBase() } }), { root: $("#s-base"), rootMargin: "400px" });
+
+/* ============ rendering: today ============ */
+function contactRow(c, opts = {}) {
+  const lead = c.leadId ? byId[c.leadId] : null;
+  const due = isDue(c);
+  const overdue = c.next && c.next < startOfDay();
+  const sub = [c.next ? `<b style="color:${due ? "var(--red)" : "var(--tint)"}">${overdue ? "просрочено · " : ""}${fmtDate(c.next, !!c.meetAt)}</b>` : "", esc(stageName(c.stage)), c.touches.length ? `касаний: ${c.touches.length}` : ""].filter(Boolean).join(" · ");
+  const phone = c.phone || (lead && lead.p && lead.p[0]);
+  return `<div class="row" data-c="${c.id}"><span class="av" style="background:${lead ? COLORS[lead.c] : COLORS["Мой контакт"]}">${initials(c.name || c.company)}</span><div class="rinfo"><div class="rt">${esc(c.name || c.company)}${c.name && c.company ? ` <span style="color:var(--label2);font-weight:400">· ${esc(c.company)}</span>` : ""}</div><div class="rs">${sub}</div>
+    ${opts.quick ? `<div class="quick">${phone ? `<a class="g press" href="${telUrl(phone)}" data-qcall="${c.id}">${ICON.call.replace(/18/g, "14")}Позвонить</a>` : ""}<button class="press" data-done="${c.id}">Готово</button><button class="press" data-snooze="${c.id}">Завтра</button></div>` : ""}</div>
+    ${!opts.quick ? `<div class="racts">${phone ? `<a class="rb call press" href="${telUrl(phone)}" data-qcall="${c.id}" aria-label="Позвонить">${ICON.call}</a>` : ""}</div>` : ""}</div>`;
+}
+function renderToday() {
+  const now = new Date(); const h = now.getHours();
+  $("#hello").textContent = h < 12 ? "Доброе утро" : h < 18 ? "Добрый день" : "Добрый вечер";
+  $("#todayDate").textContent = now.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
+  const active = crm.contacts.filter(c => c.stage !== "lost");
+  const due = dueList();
+  const overdue = due.filter(c => c.next < startOfDay());
+  const week = active.filter(c => c.next && c.next > startOfDay() + DAY - 1 && c.next < startOfDay() + 8 * DAY).sort((a, b) => a.next - b.next);
+  const meetsToday = active.filter(c => c.meetAt && startOfDay(c.meetAt) === startOfDay());
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  let html = `<div class="stats"><div class="stat red"><b>${overdue.length}</b><span>просрочено</span></div><div class="stat tint"><b>${due.length - overdue.length}</b><span>на сегодня</span></div><div class="stat"><b>${active.length}</b><span>в работе</span></div></div>`;
+  if (!standalone) html += `<div class="install"><b>Установите приложение на iPhone</b>Нажмите <svg width="15" height="17" viewBox="0 0 20 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;color:var(--blue)"><path d="M10 15V2M5 7l5-5 5 5M4 11H2v11h16V11h-2"/></svg> «Поделиться» в Safari → «На экран „Домой“». Приложение откроется без браузера, будет работать без интернета и сможет присылать уведомления.</div>`;
+  else if (!crm.settings.notify && "Notification" in window) html += `<div class="banner"><p><b>Включите напоминания</b>Значок на иконке и уведомление, когда пора напомнить о себе</p><button class="tbtn press" id="btnNotify">Включить</button></div>`;
+  if (meetsToday.length) html += `<div class="ghead"><span>Встречи сегодня</span></div><div class="group">${meetsToday.map(c => contactRow(c)).join("")}</div>`;
+  if (due.length) html += `<div class="ghead"><span>Пора связаться</span><span>${due.length}</span></div><div class="group">${due.map(c => contactRow(c, { quick: true })).join("")}</div>`;
+  else html += `<div class="group"><div class="empty"><b>${crm.contacts.length ? "На сегодня всё" : "Начните с первой компании"}</b>${crm.contacts.length ? "Новые напоминания появятся здесь автоматически" : "Откройте «Компании», выберите организацию рядом и нажмите «В работу» — или добавьте свой контакт кнопкой «+ Контакт»"}</div></div>`;
+  if (week.length) html += `<div class="ghead"><span>Ближайшие 7 дней</span><span>${week.length}</span></div><div class="group">${week.slice(0, 15).map(c => contactRow(c)).join("")}</div>`;
+  if (S.me) { const near = LEADS.filter(x => x.la && x.p && !leadContact(x.id)).map(x => (x._d = km(S.me.p, [x.la, x.lo]), x)).sort((a, b) => a._d - b._d).slice(0, 5);
+    if (near.length) html += `<div class="ghead"><span>Рядом с вами, с телефоном</span></div><div class="group">${near.map(leadRow).join("")}</div>` }
+  $("#todayBody").innerHTML = html;
+  const bn = $("#btnNotify"); if (bn) bn.onclick = enableNotify;
+}
+
+/* ============ rendering: CRM ============ */
+function renderCrm() {
+  const q = S.q2.trim().toLowerCase();
+  const cnt = {}; crm.contacts.forEach(c => cnt[c.stage] = (cnt[c.stage] || 0) + 1);
+  $("#stageChips").innerHTML = [["all", "Все", crm.contacts.length], ...STAGES.filter(s => cnt[s[0]]).map(s => [s[0], s[1], cnt[s[0]]])].map(s => `<button class="chip press" data-stage="${s[0]}" aria-pressed="${S.stage === s[0]}">${esc(s[1])} <em>${s[2]}</em></button>`).join("");
+  const list = crm.contacts.filter(c => (S.stage === "all" || c.stage === S.stage) && (!q || [c.name, c.company, c.phone, c.role, c.note].join(" ").toLowerCase().includes(q)))
+    .sort((a, b) => (a.stage === "lost") - (b.stage === "lost") || (a.next || 9e15) - (b.next || 9e15));
+  $("#crmCount").textContent = crm.contacts.length ? `${crm.contacts.length} · ${dueList().length} ждут касания` : "";
+  $("#crmList").innerHTML = list.length ? `<div class="group">${list.map(c => contactRow(c)).join("")}</div>` : `<div class="empty"><b>${crm.contacts.length ? "Нет контактов с таким фильтром" : "Пока пусто"}</b>${crm.contacts.length ? "" : "Нажмите «+ Контакт», чтобы добавить человека, с кем нужно встретиться или созвониться"}</div>`;
+}
+
+/* ============ map ============ */
+let map = null, markers = null, meLayer = null, picking = false, tileLayer = null;
+function isDark() { const t = document.documentElement.dataset.theme; return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches }
+function initMap() {
+  if (map || typeof L === "undefined") return;
+  map = L.map("map", { zoomControl: false, preferCanvas: true, attributionControl: true }).setView(S.me ? S.me.p : [41.311, 69.27], S.me ? 14 : 12);
+  setTiles();
+  markers = L.layerGroup().addTo(map); meLayer = L.layerGroup().addTo(map);
+  map.on("click", e => { if (picking) { picking = false; $("#mapHint").hidden = true; setMe([e.latlng.lat, e.latlng.lng], "Точка на карте") } });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", setTiles);
+  let lastK = null; map.on("zoomend", () => { const z = map.getZoom(), k = z >= 15 ? 1 : z >= 13 ? .75 : .5; if (k !== lastK) { lastK = k; if (S.tab === "map") renderMap() } });
+}
+function setTiles() { if (!map) return; if (tileLayer) map.removeLayer(tileLayer);
+  tileLayer = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${isDark() ? "dark_all" : "rastertiles/voyager"}/{z}/{x}/{y}{r}.png`, { maxZoom: 20, subdomains: "abcd", attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com/attributions">CARTO</a>' }).addTo(map) }
+function drawMe() { if (!meLayer) return; meLayer.clearLayers(); if (S.me) { L.circleMarker(S.me.p, { radius: 16, stroke: false, fillColor: "#0A84FF", fillOpacity: .18, interactive: false }).addTo(meLayer); L.circleMarker(S.me.p, { radius: 7, color: "#fff", weight: 3, fillColor: "#0A84FF", fillOpacity: 1 }).addTo(meLayer) } }
+function renderMap() {
+  $("#mapChips").innerHTML = chipsHtml(filtered(true));
+  initMap(); if (!map) return; setTimeout(() => map.invalidateSize(), 30);
+  markers.clearLayers(); drawMe();
+  filtered(false).forEach(x => { if (!x.la) return; const inWork = leadContact(x.id);
+    const z = map.getZoom(), k = z >= 15 ? 1 : z >= 13 ? .75 : .5;
+    const m = L.circleMarker([x.la, x.lo], { radius: (x.p ? 7 : 5) * k, color: inWork ? "#0E8C8A" : "#fff", weight: inWork ? 3 : 1.5, fillColor: COLORS[x.c], fillOpacity: x.p ? .95 : .55 });
+    m.on("click", () => { if (!picking) openLead(x.id) }); markers.addLayer(m) });
+}
+
+/* ============ settings ============ */
+function openSettings() {
+  const iv = crm.settings.intervals;
+  const o = openSheet({ head: headHtml("Настройки"),
+    body: `<div class="ghead"><span>Автонапоминания после касаний (дней)</span></div>
+    <div class="form">${["После 1-го касания", "После 2-го", "После 3-го", "Дальше каждые"].map((l, i) => `<label><span style="width:auto;flex:1">${l}</span><input type="number" inputmode="numeric" min="1" max="120" data-iv="${i}" value="${iv[i]}" style="flex:0 0 64px;text-align:right"></label>`).join("")}</div>
+    <div class="ghead"><span>Уведомления</span></div>
+    <div class="group"><button class="opt press" id="sNotify"><span class="oi" style="background:var(--red)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2.5 2.5 0 0 0 2.5-2.5h-5A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.8V3.5a1.5 1.5 0 0 0-3 0v.7A7 7 0 0 0 5 11v5l-2 2v1h18v-1z"/></svg></span><span>${crm.settings.notify ? "Уведомления включены" : "Включить уведомления"}<small>Значок с числом на иконке и уведомление при открытии. Для будильника — кнопка «В календарь» в контакте</small></span></button></div>
+    <div class="ghead"><span>Резервная копия</span></div>
+    <div class="group"><button class="opt press" id="sExport"><span class="oi" style="background:var(--blue)">↑</span><span>Сохранить копию контактов<small>Файл можно отправить себе в Telegram или сохранить в «Файлы»</small></span></button>
+      <label class="opt press" style="cursor:pointer"><span class="oi" style="background:var(--green)">↓</span><span>Восстановить из копии<small>Выберите сохранённый файл .json</small></span><input type="file" id="sImport" accept=".json,application/json" hidden></label></div>
+    <p class="note">Контакты и заметки хранятся только на этом телефоне. Делайте копию раз в неделю. База компаний: ${LEADS.length.toLocaleString("ru")} организаций, обновлено ${esc(window.DATA_VERSION || "")}. Данные © участники OpenStreetMap.</p>` });
+  const sh = o.sh;
+  sh.querySelectorAll("[data-iv]").forEach(inp => inp.onchange = () => { const v = Math.max(1, Math.min(120, +inp.value || 1)); crm.settings.intervals[+inp.dataset.iv] = v; inp.value = v; saveCrm(); toast("Сохранено") });
+  sh.querySelector("#sNotify").onclick = enableNotify;
+  sh.querySelector("#sExport").onclick = async () => {
+    const file = new File([JSON.stringify(crm, null, 1)], `oasis-crm-${new Date().toISOString().slice(0, 10)}.json`, { type: "application/json" });
+    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "Oasis CRM" }); return } } catch (e) { if (e.name === "AbortError") return }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  };
+  sh.querySelector("#sImport").onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const d = JSON.parse(await f.text()); if (!Array.isArray(d.contacts)) throw 0; const ids = new Set(crm.contacts.map(c => c.id)); const add = d.contacts.filter(c => !ids.has(c.id)); crm.contacts = crm.contacts.concat(add); saveCrm(); renderAll(); toast(`Восстановлено контактов: ${add.length}`) } catch (_) { toast("Это не файл копии Oasis CRM") } };
+}
+
+/* ============ navigation & events ============ */
+function go(tab) {
+  S.tab = tab; document.querySelectorAll(".tabbar button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+  ["today", "base", "map", "crm"].forEach(t => $("#s-" + t).hidden = t !== tab);
+  $("#fab").hidden = tab === "map";
+  if (tab !== "map") { picking = false; $("#mapHint").hidden = true }
+  render(tab); try { history.replaceState(null, "", "#" + tab) } catch (e) {}
+}
+function render(tab) { if (tab === "today") renderToday(); else if (tab === "base") renderBase(); else if (tab === "map") renderMap(); else renderCrm() }
+function renderAll() { updateBadge(); render(S.tab) }
+document.querySelector(".tabbar").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) { if (b.dataset.tab === S.tab) { const sc = $("#s-" + S.tab); sc.scrollTo({ top: 0, behavior: "smooth" }) } else go(b.dataset.tab) } });
+document.addEventListener("click", e => {
+  const chip = e.target.closest(".chip[data-c]"); if (chip) { S.cat = chip.dataset.c; S.shown = 60; render(S.tab); return }
+  const st = e.target.closest(".chip[data-stage]"); if (st) { S.stage = st.dataset.stage; renderCrm(); return }
+  if (e.target.closest(".racts,.quick")) {
+    const qc = e.target.closest("[data-qcall]"); if (qc) { const id = qc.dataset.qcall; setTimeout(() => askLogCall(id), 900); return }
+    const cc = e.target.closest("[data-callc]"); if (cc) { const id = cc.dataset.callc; const x = byId[id]; if (x && x.p) { if (!leadContact(id)) newContact({ company: x.n, phone: x.p[0], leadId: id, stage: "new", next: at10(0) }); setTimeout(() => askLogCall(leadContact(id).id), 900) } return }
+    const dn = e.target.closest("[data-done]"); if (dn) { logTouch(dn.dataset.done, "call"); return }
+    const sz = e.target.closest("[data-snooze]"); if (sz) { const c = getC(sz.dataset.snooze); c.next = at10(1); saveCrm(); renderAll(); toast("Напомню завтра"); return }
+    return;
+  }
+  const lr = e.target.closest("[data-lead]"); if (lr && !e.target.closest("a")) { openLead(lr.dataset.lead); return }
+  const cr = e.target.closest(".row[data-c]"); if (cr && !e.target.closest("a")) { openContact(cr.dataset.c); return }
+});
+$("#q").addEventListener("input", e => { S.q = e.target.value; S.shown = 60; clearTimeout(window._qt); window._qt = setTimeout(renderBase, 120) });
+$("#q2").addEventListener("input", e => { S.q2 = e.target.value; renderCrm() });
+$("#seg").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (!b) return; S.f = b.dataset.f; S.shown = 60; $("#seg").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); renderBase() });
+$("#btnLoc").onclick = openLoc;
+$("#btnMe").onclick = () => { if (S.me && map) map.setView(S.me.p, 15); openLoc() };
+$("#btnSettings").onclick = openSettings;
+$("#fab").onclick = () => openForm(null);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { renderAll(); maybeNotify() } });
+
+/* ============ boot ============ */
+if (S.me) $("#locLabel").textContent = S.me.label;
+const startTab = (location.hash || "").slice(1);
+go(["today", "base", "map", "crm"].includes(startTab) ? startTab : "today");
+updateBadge(); maybeNotify();
+if (S.me && S.me.label === "Я здесь") gps(true);
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist() } catch (e) {}
+setInterval(() => { updateBadge(); if (S.tab === "today") renderToday() }, 60000);
+</script>
+</body>
+</html>
