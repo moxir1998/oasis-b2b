@@ -1,12 +1,12 @@
 /* Oasis B2B service worker: приложение работает офлайн, карта кэширует просмотренные районы */
-const VERSION = "oasis-b2b-v2";
+const VERSION = "oasis-b2b-v3";
 const SHELL = ["./", "index.html", "data.js", "playbooks.js", "leaflet.js", "leaflet.css",
   "manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
 const TILE_CACHE = "oasis-tiles-v2";
 const TILE_LIMIT = 1500;
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(
@@ -30,11 +30,15 @@ self.addEventListener("fetch", e => {
     return;
   }
   if (url.origin !== location.origin) return;
-  // stale-while-revalidate: мгновенно из кэша, в фоне обновляем
+  // сначала сеть (свежая версия), без сети — из кэша
   e.respondWith(caches.open(VERSION).then(async c => {
-    const hit = await c.match(e.request, { ignoreSearch: true });
-    const net = fetch(e.request).then(r => { if (r.ok) c.put(e.request, r.clone()); return r; }).catch(() => hit);
-    return hit || net;
+    try {
+      const r = await Promise.race([fetch(e.request, { cache: "no-cache" }), new Promise((_, rej) => setTimeout(() => rej("timeout"), 4000))]);
+      if (r && r.ok) c.put(e.request, r.clone());
+      return r;
+    } catch (_) {
+      return (await c.match(e.request, { ignoreSearch: true })) || (await c.match("index.html")) || Response.error();
+    }
   }));
 });
 self.addEventListener("notificationclick", e => {
