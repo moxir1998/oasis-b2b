@@ -246,6 +246,7 @@ a{color:inherit}
   </div>
   <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Название, улица, сфера" autocomplete="off" enterkeyhint="search"></label>
   <div class="chips" id="chips"></div>
+  <div class="chips" id="tagChips" style="margin-top:8px" hidden></div>
   <div class="seg" id="seg">
     <button data-f="all" aria-pressed="true">Все</button>
     <button data-f="phone" aria-pressed="false">С телефоном</button>
@@ -293,8 +294,8 @@ a{color:inherit}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const DAY = 864e5;
-const COLORS = {"Производство":"#E4572E","IT-сектор":"#2F6FED","Логистика":"#8A5CF6","Консалтинг":"#0F9D8F","Медицина":"#E0457B","Обучение":"#F29E0B","Финансы":"#15803D","Застройщики":"#A16207","Спорт":"#0EA5E9","Госорганы":"#64748B","Посольства и межд.":"#7C3AED","Отели и MICE":"#DB2777","Школы и сады":"#CA8A04","Торговля":"#0891B2","Реклама и медиа":"#C026D3","Компании":"#78716C","Мой контакт":"#0E8C8A"};
-const CAT_ORDER = ["Производство","IT-сектор","Логистика","Консалтинг","Медицина","Обучение","Финансы","Застройщики","Спорт","Госорганы","Посольства и межд.","Отели и MICE","Школы и сады","Торговля","Реклама и медиа","Компании"];
+const COLORS = {"Производство":"#E4572E","IT-сектор":"#2F6FED","Логистика":"#8A5CF6","Консалтинг":"#0F9D8F","Медицина":"#E0457B","Обучение":"#F29E0B","Финансы":"#15803D","Застройщики":"#A16207","Спорт":"#0EA5E9","Госорганы":"#64748B","Посольства и межд.":"#7C3AED","Отели и MICE":"#DB2777","Школы и сады":"#CA8A04","Торговля":"#0891B2","Реклама и медиа":"#C026D3","Компании":"#78716C","Туризм":"#6366F1","Мой контакт":"#0E8C8A"};
+const CAT_ORDER = ["Туризм","Производство","IT-сектор","Логистика","Консалтинг","Медицина","Обучение","Финансы","Застройщики","Спорт","Госорганы","Посольства и межд.","Отели и MICE","Школы и сады","Торговля","Реклама и медиа","Компании"];
 const ICON = {
   nav:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3 3 10.5l7.5 3L13.5 21z"/></svg>',
   call:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>',
@@ -331,7 +332,7 @@ const DEF_SETTINGS = { intervals: [3, 7, 14, 30], notify: false, lastNotify: 0 }
 let crm = store.get("oasis.crm.v1", { contacts: [], settings: DEF_SETTINGS });
 crm.settings = Object.assign({}, DEF_SETTINGS, crm.settings);
 const saveCrm = () => { store.set("oasis.crm.v1", crm); updateBadge() };
-const S = { tab: "today", cat: "Все", q: "", f: "all", me: store.get("oasis.me", null), shown: 60, stage: "all", q2: "" };
+const S = { tab: "today", cat: "Все", tag: "Все", q: "", f: "all", me: store.get("oasis.me", null), shown: 60, stage: "all", q2: "" };
 const STAGES = [["new","Новый"],["contacted","Первый контакт"],["talks","Переговоры"],["meeting","Встреча"],["proposal","КП отправлено"],["client","Клиент"],["lost","Отказ"]];
 const stageName = k => (STAGES.find(s => s[0] === k) || ["", "Новый"])[1];
 const TOUCH = [["call","Звонок"],["msg","Сообщение"],["meet","Встреча"],["kp","Отправил КП"],["visit","Визит без встречи"]];
@@ -390,9 +391,11 @@ function openLead(id) {
   const c = leadContact(id);
   const d = S.me && x.la ? km(S.me.p, [x.la, x.lo]) : null;
   const phones = x.p || [];
-  const meta = `<span class="tag"><i style="background:${COLORS[x.c]}"></i>${esc(x.c)}</span>${d != null ? `<span>${fmtKm(d)} от вас</span>` : ""}${x.br ? `<span>сеть · ${x.br} точек</span>` : ""}${c ? `<span class="badge b-work">в работе · ${esc(stageName(c.stage))}</span>` : ""}`;
+  const meta = `<span class="tag"><i style="background:${COLORS[x.c]}"></i>${esc(x.c)}${x.t ? " · " + esc(x.t) : ""}</span>${d != null ? `<span>${fmtKm(d)} от вас</span>` : ""}${x.br ? `<span>сеть · ${x.br} точек</span>` : ""}${c ? `<span class="badge b-work">в работе · ${esc(stageName(c.stage))}</span>` : ""}`;
   const links = [];
   if (x.w) links.push(`<a class="link press" href="${esc(x.w)}" target="_blank" rel="noopener"><span class="li" style="background:var(--blue)">www</span><span><b>Официальный сайт</b><small>${esc(x.w.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</small></span>${ICON.chev}</a>`);
+  if (x.ig) links.push(`<a class="link press" href="https://instagram.com/${esc(String(x.ig).replace(/^.*instagram\.com\//, "").replace(/^@/, "").replace(/\/$/, ""))}" target="_blank" rel="noopener"><span class="li" style="background:#E1306C">IG</span><span><b>Instagram</b><small>Официальная страница</small></span>${ICON.chev}</a>`);
+  if (x.tg) links.push(`<a class="link press" href="https://t.me/${esc(String(x.tg).replace(/^.*t\.me\//, "").replace(/^@/, ""))}" target="_blank" rel="noopener"><span class="li" style="background:#229ED9">TG</span><span><b>Telegram</b><small>Канал или аккаунт компании</small></span>${ICON.chev}</a>`);
   const ou = osmUrl(x.osm);
   if (ou) links.push(`<a class="link press" href="${ou}" target="_blank" rel="noopener"><span class="li" style="background:#7EBC6F">OSM</span><span><b>Карточка этой организации</b><small>OpenStreetMap — все известные данные: телефон, сайт, часы</small></span>${ICON.chev}</a>`);
   if (x.la) links.push(`<a class="link press" href="${yaHere(x.la, x.lo)}" target="_blank" rel="noopener"><span class="li" style="background:#FC3F1D">Я</span><span><b>Яндекс Карты — эта точка</b><small>Организация по этому адресу, отзывы и телефоны</small></span>${ICON.chev}</a>`);
@@ -591,7 +594,7 @@ function openLoc() {
 /* ============ rendering: companies ============ */
 function filtered(ignoreCat) {
   const q = S.q.trim().toLowerCase();
-  let arr = LEADS.filter(x => (ignoreCat || S.cat === "Все" || x.c === S.cat) && (!q || x._s.includes(q)) &&
+  let arr = LEADS.filter(x => (ignoreCat || S.cat === "Все" || x.c === S.cat) && (ignoreCat || S.cat !== "Туризм" || S.tag === "Все" || x.t === S.tag) && (!q || x._s.includes(q)) &&
     (S.f !== "phone" || x.p) && (S.f !== "web" || x.w) && (S.f !== "new" || !leadContact(x.id)));
   if (S.me) { arr.forEach(x => x._d = x.la ? km(S.me.p, [x.la, x.lo]) : 1e9); arr.sort((a, b) => a._d - b._d) }
   else { arr.forEach(x => x._d = null); arr.sort((a, b) => ((b.p ? 2 : 0) + (b.w ? 1 : 0)) - ((a.p ? 2 : 0) + (a.w ? 1 : 0)) || a._n.localeCompare(b._n, "ru")) }
@@ -600,13 +603,13 @@ function filtered(ignoreCat) {
 function chipsHtml(base) { const cnt = {}; base.forEach(x => cnt[x.c] = (cnt[x.c] || 0) + 1); return ["Все", ...CAT_ORDER.filter(c => cnt[c])].map(c => `<button class="chip press" data-c="${esc(c)}" aria-pressed="${S.cat === c}">${c !== "Все" ? `<i style="background:${COLORS[c]}"></i>` : ""}${esc(c)} <em>${c === "Все" ? base.length : cnt[c]}</em></button>`).join("") }
 function leadRow(x) {
   const c = leadContact(x.id);
-  const sub = [x._d != null && x._d < 1e8 ? `<b>${fmtKm(x._d)}</b>` : "", esc(x.c), esc(x.a || "")].filter(Boolean).join(" · ");
+  const sub = [x._d != null && x._d < 1e8 ? `<b>${fmtKm(x._d)}</b>` : "", esc(x.t || x.c), esc(x.a || "")].filter(Boolean).join(" · ");
   return `<div class="row" data-lead="${x.id}"><span class="av" style="background:${COLORS[x.c]}">${initials(x.n)}</span><div class="rinfo"><div class="rt">${c ? `<span class="badge b-work">в работе</span>` : ""}${esc(x.n)}</div><div class="rs">${sub}</div></div>
     <div class="racts"><a class="rb nav press" href="${routeUrl(x.la, x.lo, x.a || x.n)}" target="_blank" rel="noopener" aria-label="Маршрут">${ICON.nav}</a><a class="rb call press ${x.p ? "" : "off"}" href="${x.p ? telUrl(x.p[0]) : "#"}" data-callc="${x.id}" aria-label="Позвонить">${ICON.call}</a></div></div>`;
 }
 let cur = [];
 function renderBase() {
-  const base = filtered(true); $("#chips").innerHTML = chipsHtml(base);
+  const base = filtered(true); $("#chips").innerHTML = chipsHtml(base); renderTagChips();
   cur = filtered(false);
   $("#baseCount").textContent = `${cur.length.toLocaleString("ru")} · ${cur.filter(x => x.p).length.toLocaleString("ru")} с телефоном`;
   const L = $("#baseList");
@@ -616,6 +619,13 @@ function renderBase() {
 }
 const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); S.shown += 80; renderBase() } }), { root: $("#s-base"), rootMargin: "400px" });
 
+function renderTagChips() {
+  const el = $("#tagChips"); if (S.cat !== "Туризм") { el.hidden = true; return }
+  const pool = LEADS.filter(x => x.c === "Туризм"); const cnt = {}; pool.forEach(x => cnt[x.t] = (cnt[x.t] || 0) + 1);
+  const order = ["Турагентство","Авиакасса","Визовый центр","Консалтинг","Корп. тревел (TMC)","Авиакомпания"];
+  el.hidden = false;
+  el.innerHTML = [["Все", pool.length], ...order.filter(t => cnt[t]).map(t => [t, cnt[t]])].map(t => `<button class="chip press" data-tag="${esc(t[0])}" aria-pressed="${S.tag === t[0]}" style="height:28px;font-size:13px">${esc(t[0])} <em>${t[1]}</em></button>`).join("");
+}
 /* ============ rendering: today ============ */
 function contactRow(c, opts = {}) {
   const lead = c.leadId ? byId[c.leadId] : null;
@@ -721,7 +731,8 @@ function render(tab) { if (tab === "today") renderToday(); else if (tab === "bas
 function renderAll() { updateBadge(); render(S.tab) }
 document.querySelector(".tabbar").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if (b) { if (b.dataset.tab === S.tab) { const sc = $("#s-" + S.tab); sc.scrollTo({ top: 0, behavior: "smooth" }) } else go(b.dataset.tab) } });
 document.addEventListener("click", e => {
-  const chip = e.target.closest(".chip[data-c]"); if (chip) { S.cat = chip.dataset.c; S.shown = 60; render(S.tab); return }
+  const chip = e.target.closest(".chip[data-c]"); if (chip) { S.cat = chip.dataset.c; S.tag = "Все"; S.shown = 60; render(S.tab); return }
+  const tg = e.target.closest(".chip[data-tag]"); if (tg) { S.tag = tg.dataset.tag; S.shown = 60; render(S.tab); return }
   const st = e.target.closest(".chip[data-stage]"); if (st) { S.stage = st.dataset.stage; renderCrm(); return }
   if (e.target.closest(".racts,.quick")) {
     const qc = e.target.closest("[data-qcall]"); if (qc) { const id = qc.dataset.qcall; setTimeout(() => askLogCall(id), 900); return }

@@ -1,5 +1,5 @@
 /* Oasis B2B service worker: приложение работает офлайн, карта кэширует просмотренные районы */
-const VERSION = "oasis-b2b-v3";
+const VERSION = "oasis-b2b-v4";
 const SHELL = ["./", "index.html", "data.js", "playbooks.js", "leaflet.js", "leaflet.css",
   "manifest.webmanifest", "apple-touch-icon.png", "icon-192.png", "icon-512.png"];
 const TILE_CACHE = "oasis-tiles-v2";
