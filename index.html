@@ -217,6 +217,12 @@ a{color:inherit}
 .link small{display:block;font-size:12.5px;color:var(--label2)}
 .link svg.chev{margin-left:auto;color:var(--label3);flex:none}
 .note{font-size:12.5px;color:var(--label2);margin:6px 6px 14px;line-height:1.45}
+.factfield{display:block;margin-top:12px}
+.factfield:first-of-type{margin-top:0}
+.factfield span{display:block;font-size:12px;color:var(--label2);margin-bottom:4px}
+.factfield input,.factfield textarea{width:100%;border:0;border-bottom:1px solid var(--sep);background:transparent;font-size:15.5px;padding:6px 0;outline:0;font-family:inherit}
+.factfield textarea{resize:none;min-height:50px;line-height:1.4}
+.factfield input:focus,.factfield textarea:focus{border-color:var(--tint)}
 
 /* Forms */
 .form{background:var(--card);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
@@ -358,6 +364,8 @@ LEADS.forEach(x => { x._n = x.n.replace(/^[\s"«“'„]+/, ""); x._s = (x.n + "
 const byId = Object.fromEntries(LEADS.map(x => [x.id, x]));
 const DEF_SETTINGS = { intervals: [3, 7, 14, 30], notify: false, lastNotify: 0 };
 let crm = store.get("oasis.crm.v1", { contacts: [], settings: DEF_SETTINGS });
+let facts = store.get("oasis.facts.v1", {});
+function saveFacts() { store.set("oasis.facts.v1", facts) }
 crm.settings = Object.assign({}, DEF_SETTINGS, crm.settings);
 const saveCrm = () => { store.set("oasis.crm.v1", crm); updateBadge() };
 const S = { tab: "today", cat: "Все", tag: "Все", q: "", f: "all", me: store.get("oasis.me", null), shown: 60, stage: "all", q2: "" };
@@ -416,6 +424,7 @@ const headHtml = (title, metaHtml = "") => `<div class="sh-title"><h2>${title}</
 function openLead(id) {
   const x = byId[id]; if (!x) return;
   const pb = window.pickPlaybook(x);
+  const f = facts[id] || {};
   const c = leadContact(id);
   const d = S.me && x.la ? km(S.me.p, [x.la, x.lo]) : null;
   const phones = x.p || [];
@@ -431,6 +440,14 @@ function openLead(id) {
   links.push(`<a class="link press" href="${gSearch(x.n)}" target="_blank" rel="noopener"><span class="li" style="background:#4285F4">G</span><span><b>Google по точному названию</b><small>Соцсети, новости, вакансии компании</small></span>${ICON.chev}</a>`);
   const body = `
     <div class="card"><h3>О компании</h3><p><b>${esc(x.n)}</b>${x.al ? ` (${esc(x.al)})` : ""} — ${esc(pb.about.charAt(0).toLowerCase() + pb.about.slice(1))}</p></div>
+    <div class="card" id="factsCard">
+      <h3>Факты о компании</h3>
+      <p class="note" style="margin:0 0 10px">Заполните за минуту по ссылкам ниже (сайт, Instagram, Google) — на звонке будет видно, что вы их изучили. Сохранится само.</p>
+      <label class="factfield"><span>С какого года работают</span><input id="fFounded" value="${esc(f.founded || "")}" placeholder="напр. с 2016 года / 8 лет на рынке"></label>
+      <label class="factfield"><span>Размер компании</span><input id="fSize" value="${esc(f.size || "")}" placeholder="напр. ~30 сотрудников, 2 офиса"></label>
+      <label class="factfield"><span>Фишка, достижение</span><textarea id="fPerk" placeholder="Чем выделяются: крупные клиенты, награды, узкая специализация">${esc(f.perk || "")}</textarea></label>
+      <label class="factfield"><span>Другие факты</span><textarea id="fFactNote" placeholder="Новости, отзывы, посты в Instagram — всё, что нашли сами">${esc(f.note || "")}</textarea></label>
+    </div>
     <div class="offer"><h3>Оффер, от которого сложно отказаться</h3><p>${esc(pb.offer)}</p><small>Подстройте цифры под свою маржу перед звонком</small></div>
     <div class="card"><h3>С чего начать</h3><p>${esc(pb.start)}</p></div>
     <div class="card"><h3>Хуки для разговора</h3>${pb.hooks.map(h => `<div class="hook">${esc(h)}<button data-copy="${esc(h.replace(/[«»]/g, ""))}">Скопировать</button></div>`).join("")}</div>
@@ -448,6 +465,16 @@ function openLead(id) {
     <button class="act tint press" id="aWork">${c ? ICON.check + "Открыть в CRM" : ICON.plus + "В работу"}</button>`;
   const sh = openSheet({ head: headHtml(esc(x.n), meta), body, actions }).sh;
   wireCopy(sh);
+  [["fFounded", "founded"], ["fSize", "size"], ["fPerk", "perk"], ["fFactNote", "note"]].forEach(([elId, key]) => {
+    const el = sh.querySelector("#" + elId);
+    el.addEventListener("blur", () => {
+      const v = el.value.trim();
+      facts[id] = facts[id] || {};
+      if (v) facts[id][key] = v; else delete facts[id][key];
+      if (!Object.keys(facts[id]).length) delete facts[id];
+      saveFacts();
+    });
+  });
   sh.querySelector("#aWork").onclick = () => {
     let cc = leadContact(id);
     if (!cc) { cc = newContact({ name: "", company: x.n, phone: phones[0] || "", leadId: id, stage: "new", next: at10(0), note: "" }); toast("Добавлено в «Мои контакты» — напомню сегодня") }
